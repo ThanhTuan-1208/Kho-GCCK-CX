@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root{
+      --bg:#EEF1F6;
+      --card:#FFFFFF;
+      --navy:#0B2545;
+      --navy-soft:#3A5A85;
+      --amber:#FFB100;
+      --amber-dark:#B87700;
+      --green:#16A34A;
+      --green-bg:#EAF7EF;
+      --red:#DC2626;
+      --red-bg:#FCEBEA;
+      --border:#D9DFE8;
+      --mono:'IBM Plex Mono', monospace;
+      --display:'Space Grotesk', sans-serif;
+      --body:'Inter', sans-serif;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:var(--bg);
+      font-family:var(--body);
+      color:var(--navy);
+      min-height:100vh;
+      padding-bottom:40px;
+    }
+    header{
+      background:var(--navy);
+      color:#fff;
+      padding:22px 20px 20px;
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+    header .eyebrow{
+      font-family:var(--mono);
+      font-size:11px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--amber);
+      margin-bottom:4px;
+    }
+    header h1{
+      font-family:var(--display);
+      font-size:20px;
+      margin:0;
+      font-weight:700;
+    }
+    .tabs{
+      display:flex;
+      gap:8px;
+      margin-top:16px;
+    }
+    .tab-btn{
+      flex:1;
+      border:none;
+      padding:11px 8px;
+      border-radius:10px;
+      font-family:var(--body);
+      font-weight:600;
+      font-size:14px;
+      cursor:pointer;
+      background:rgba(255,255,255,.08);
+      color:rgba(255,255,255,.7);
+      transition:.15s;
+    }
+    .tab-btn.active{
+      background:var(--amber);
+      color:var(--navy);
+    }
+    main{
+      max-width:520px;
+      margin:0 auto;
+      padding:18px 16px;
+    }
+    .panel{display:none;}
+    .panel.active{display:block;}
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:18px;
+      margin-bottom:16px;
+    }
+    .card h2{
+      font-family:var(--display);
+      font-size:15px;
+      margin:0 0 12px;
+      color:var(--navy);
+    }
+    .scan-btn{
+      width:100%;
+      padding:16px;
+      border:none;
+      border-radius:12px;
+      background:var(--navy);
+      color:#fff;
+      font-family:var(--body);
+      font-weight:600;
+      font-size:15px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+    }
+    .scan-btn:active{opacity:.85;}
+    .scan-btn svg{flex-shrink:0;}
+    #reader-wrap{
+      margin-top:14px;
+      border-radius:12px;
+      overflow:hidden;
+      display:none;
+    }
+    #reader-wrap.show{display:block;}
+    #reader{width:100%;}
+    .stop-btn{
+      width:100%;
+      margin-top:8px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--navy-soft);
+      font-weight:600;
+      font-size:13px;
+      cursor:pointer;
+    }
+
+    .manual-toggle{
+      text-align:center;
+      margin-top:12px;
+      font-size:13px;
+      color:var(--navy-soft);
+      cursor:pointer;
+      text-decoration:underline;
+    }
+    .manual-box{display:none;margin-top:10px;gap:8px;}
+    .manual-box.show{display:flex;}
+    .manual-box input{
+      flex:1;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      font-family:var(--mono);
+      font-size:13px;
+    }
+    .manual-box button{
+      padding:10px 14px;
+      border-radius:10px;
+      border:none;
+      background:var(--amber);
+      color:var(--navy);
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    /* Ticket / phiếu style */
+    .ticket{
+      border:2px dashed var(--navy-soft);
+      border-radius:12px;
+      padding:16px;
+      background:#FAFBFD;
+      position:relative;
+    }
+    .ticket .tag{
+      position:absolute;
+      top:-11px;
+      left:14px;
+      background:var(--amber);
+      color:var(--navy);
+      font-family:var(--mono);
+      font-size:11px;
+      font-weight:600;
+      padding:2px 10px;
+      border-radius:6px;
+      letter-spacing:.05em;
+    }
+    .ticket-row{
+      display:flex;
+      justify-content:space-between;
+      padding:6px 0;
+      border-bottom:1px solid #E4E9F0;
+      font-size:13.5px;
+    }
+    .ticket-row:last-child{border-bottom:none;}
+    .ticket-row .label{color:var(--navy-soft);}
+    .ticket-row .value{
+      font-family:var(--mono);
+      font-weight:600;
+      color:var(--navy);
+      text-align:right;
+    }
+    .maid-pill{
+      display:inline-block;
+      font-family:var(--mono);
+      font-weight:700;
+      font-size:13px;
+      background:var(--navy);
+      color:var(--amber);
+      padding:5px 10px;
+      border-radius:8px;
+      margin-top:10px;
+    }
+
+    .field{margin-bottom:14px;}
+    .field label{
+      display:block;
+      font-size:12.5px;
+      font-weight:600;
+      color:var(--navy-soft);
+      margin-bottom:5px;
+    }
+    .field input{
+      width:100%;
+      padding:11px 12px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      font-size:14.5px;
+      font-family:var(--body);
+      color:var(--navy);
+    }
+    .field-row{display:flex;gap:10px;}
+    .field-row .field{flex:1;}
+
+    .primary-btn{
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:var(--amber);
+      color:var(--navy);
+      font-weight:700;
+      font-size:15px;
+      cursor:pointer;
+    }
+    .primary-btn:disabled{opacity:.5;cursor:default;}
+    .ghost-btn{
+      width:100%;
+      margin-top:8px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--navy-soft);
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    .status{
+      border-radius:12px;
+      padding:13px 14px;
+      font-size:13.5px;
+      font-weight:500;
+      margin-bottom:14px;
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+    }
+    .status.success{background:var(--green-bg);color:#0F5C2E;}
+    .status.error{background:var(--red-bg);color:#8A1F1F;}
+    .status.warning{background:#FFF4E0;color:#8A5A00;}
+
+    .confirm-row{display:flex;gap:10px;margin-top:4px;}
+    .confirm-row button{flex:1;padding:11px;border-radius:10px;border:none;font-weight:700;cursor:pointer;}
+    .confirm-yes{background:var(--red);color:#fff;}
+    .confirm-no{background:#fff;border:1px solid var(--border) !important;color:var(--navy-soft);}
+
+    .empty-hint{
+      text-align:center;
+      color:var(--navy-soft);
+      font-size:13px;
+      padding:20px 10px;
+      line-height:1.6;
+    }
+    .spinner{
+      width:16px;height:16px;border-radius:50%;
+      border:2.5px solid rgba(11,37,69,.15);
+      border-top-color:var(--navy);
+      animation:spin .7s linear infinite;
+      display:inline-block;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">KHO GCCK CX</div>
+  <h1>Quản lý Vật tư Kho</h1>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('nhan')">📥 Nhận hàng</button>
+    <button class="tab-btn" onclick="switchTab('giao')">📤 Giao hàng</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= NHẬN HÀNG ================= -->
+  <div id="panel-nhan" class="panel active">
+    <div class="card">
+      <h2>1. Quét mã QR trên phiếu</h2>
+      <button class="scan-btn" id="btn-scan-nhan" onclick="startScan('nhan')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        Bắt đầu quét QR
+      </button>
+      <div id="reader-wrap-nhan" class="reader-wrap-el" style="margin-top:14px;border-radius:12px;overflow:hidden;display:none;">
+        <div id="reader-nhan"></div>
+        <button class="stop-btn" onclick="stopScan('nhan')">Dừng quét</button>
+      </div>
+      <div class="manual-toggle" onclick="toggleManual('nhan')">hoặc nhập/dán mã thủ công</div>
+      <div class="manual-box" id="manual-nhan">
+        <input type="text" id="manual-input-nhan" placeholder="LSX | STT | Mã CT | Tên CT | SL">
+        <button onclick="submitManual('nhan')">Dùng</button>
+      </div>
+    </div>
+
+    <div id="result-nhan"></div>
+  </div>
+
+  <!-- ================= GIAO HÀNG ================= -->
+  <div id="panel-giao" class="panel">
+    <div class="card">
+      <h2>1. Quét mã QR trên phiếu cần giao</h2>
+      <button class="scan-btn" id="btn-scan-giao" onclick="startScan('giao')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        Bắt đầu quét QR
+      </button>
+      <div id="reader-wrap-giao" class="reader-wrap-el" style="margin-top:14px;border-radius:12px;overflow:hidden;display:none;">
+        <div id="reader-giao"></div>
+        <button class="stop-btn" onclick="stopScan('giao')">Dừng quét</button>
+      </div>
+      <div class="manual-toggle" onclick="toggleManual('giao')">hoặc nhập/dán mã thủ công</div>
+      <div class="manual-box" id="manual-giao">
+        <input type="text" id="manual-input-giao" placeholder="LSX | STT | Mã CT | Tên CT | SL">
+        <button onclick="submitManual('giao')">Dùng</button>
+      </div>
+    </div>
+
+    <div id="result-giao"></div>
+  </div>
+
+</main>
+
+<script>
+/* ==========================================================
+   DÁN LINK WEB APP (Apps Script) CỦA BẠN VÀO ĐÂY, VÍ DỤ:
+   'https://script.google.com/macros/s/AKfycb.../exec'
+   ========================================================== */
+const SCRIPT_URL = 'DÁN_LINK_APPS_SCRIPT_VÀO_ĐÂY';
+
+function callApi(payload){
+  return fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // tránh CORS preflight
+    body: JSON.stringify(payload)
+  }).then(r => {
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+let scanners = {}; // giữ instance Html5Qrcode theo tab
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+  // dừng camera của tab còn lại để tránh 2 camera cùng chạy
+  ['nhan','giao'].filter(t=>t!==tab).forEach(t=>stopScan(t));
+}
+
+function todayStr(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+
+function toggleManual(tab){
+  document.getElementById('manual-'+tab).classList.toggle('show');
+}
+
+function submitManual(tab){
+  const val = document.getElementById('manual-input-'+tab).value.trim();
+  if(!val) return;
+  onScanSuccess(tab, val);
+}
+
+function startScan(tab){
+  const wrapId = 'reader-wrap-'+tab;
+  document.getElementById(wrapId).classList.add('show');
+  document.getElementById(wrapId).style.display = 'block';
+  document.getElementById('btn-scan-'+tab).style.display = 'none';
+
+  const qr = new Html5Qrcode('reader-'+tab);
+  scanners[tab] = qr;
+  qr.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    (decodedText) => { onScanSuccess(tab, decodedText); },
+    () => {}
+  ).catch((err) => {
+    showStatus(tab, 'error', 'Không mở được camera: ' + err + '. Bạn có thể nhập mã thủ công bên dưới.');
+    document.getElementById('btn-scan-'+tab).style.display = 'flex';
+  });
+}
+
+function stopScan(tab){
+  const qr = scanners[tab];
+  const wrapId = 'reader-wrap-'+tab;
+  if(qr){
+    qr.stop().then(()=>qr.clear()).catch(()=>{});
+    scanners[tab] = null;
+  }
+  const wrap = document.getElementById(wrapId);
+  if(wrap){ wrap.classList.remove('show'); wrap.style.display='none'; }
+  document.getElementById('btn-scan-'+tab).style.display = 'flex';
+}
+
+function parseQr(text){
+  const parts = text.split('|').map(s=>s.trim());
+  return {
+    lsx: parts[0] || '',
+    stt: parts[1] || '',
+    mact: parts[2] || '',
+    ten: parts[3] || '',
+    sl: parts[4] || ''
+  };
+}
+
+function onScanSuccess(tab, text){
+  stopScan(tab);
+  const data = parseQr(text);
+  if(!data.lsx || !data.stt){
+    showStatus(tab, 'error', 'Không đọc được dữ liệu hợp lệ từ mã: "' + text + '"');
+    return;
+  }
+  if(tab === 'nhan'){
+    renderReceiveForm(data);
+  } else {
+    const maId = data.lsx + '-' + data.stt;
+    lookupForShip(maId, data);
+  }
+}
+
+function showStatus(tab, type, message){
+  const box = document.getElementById('result-'+tab);
+  box.innerHTML = '<div class="status '+type+'">'+iconFor(type)+'<span>'+escapeHtml(message)+'</span></div>';
+}
+
+function iconFor(type){
+  if(type==='success') return '✅';
+  if(type==='error') return '⛔';
+  return '⚠️';
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.innerText = str;
+  return d.innerHTML;
+}
+
+/* ---------------- NHẬN HÀNG ---------------- */
+
+function renderReceiveForm(data, opts){
+  opts = opts || {};
+  const maId = data.lsx + '-' + data.stt;
+  const box = document.getElementById('result-nhan');
+  box.innerHTML = `
+    <div class="card">
+      <h2>2. Thông tin phiếu</h2>
+      <div class="ticket">
+        <span class="tag">PHIẾU</span>
+        <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(data.lsx)}</span></div>
+        <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(data.stt)}</span></div>
+        <div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">${escapeHtml(data.mact)}</span></div>
+        <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(data.ten)}</span></div>
+        <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(data.sl)}</span></div>
+        <span class="maid-pill">${escapeHtml(maId)}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>3. Vị trí lưu kho</h2>
+      <div class="field-row">
+        <div class="field"><label>Số kệ</label><input type="text" id="in-soke" inputmode="numeric"></div>
+        <div class="field"><label>Tầng</label><input type="text" id="in-tang" inputmode="numeric"></div>
+      </div>
+      <div class="field"><label>Ngày nhận</label><input type="date" id="in-ngaynhan" value="${todayStr()}"></div>
+      <button class="primary-btn" id="btn-save-nhan" onclick="saveReceive()">Lưu vào kho</button>
+      <button class="ghost-btn" onclick="startScan('nhan')">Quét mã khác</button>
+    </div>
+    <div id="status-nhan"></div>
+  `;
+  window.__currentReceiveData = data;
+}
+
+function saveReceive(confirmDuplicate){
+  const data = window.__currentReceiveData;
+  const payload = {
+    lsx: data.lsx,
+    stt: data.stt,
+    mact: data.mact,
+    ten: data.ten,
+    sl: data.sl,
+    soKe: document.getElementById('in-soke').value,
+    tang: document.getElementById('in-tang').value,
+    ngayNhan: document.getElementById('in-ngaynhan').value,
+    confirmDuplicate: !!confirmDuplicate
+  };
+  const btn = document.getElementById('btn-save-nhan');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang lưu...';
+
+  payload.action = 'receive';
+  callApi(payload)
+    .then(function(res){
+      btn.disabled = false;
+      btn.innerHTML = 'Lưu vào kho';
+      const statusBox = document.getElementById('status-nhan');
+      if(res.success){
+        statusBox.innerHTML = '<div class="status success">✅ Đã lưu vào kho. Mã ID: <b>'+escapeHtml(res.maId)+'</b></div>';
+      } else if(res.duplicate){
+        statusBox.innerHTML = `
+          <div class="status warning">⚠️ ${escapeHtml(res.message)}
+          </div>
+          <div class="confirm-row">
+            <button class="confirm-yes" onclick="saveReceive(true)">Vẫn thêm mới</button>
+            <button class="confirm-no" onclick="document.getElementById('status-nhan').innerHTML=''">Hủy</button>
+          </div>`;
+      } else {
+        statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+      }
+    })
+    .catch(function(err){
+      btn.disabled = false;
+      btn.innerHTML = 'Lưu vào kho';
+      document.getElementById('status-nhan').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
+    });
+}
+
+/* ---------------- GIAO HÀNG ---------------- */
+
+function lookupForShip(maId, data){
+  const box = document.getElementById('result-giao');
+  box.innerHTML = '<div class="card"><div class="empty-hint"><span class="spinner"></span><br>Đang tra cứu mã '+escapeHtml(maId)+' ...</div></div>';
+
+  callApi({ action: 'search', maId: maId })
+    .then(function(res){
+      if(!res.success){
+        box.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+        return;
+      }
+      if(!res.found){
+        box.innerHTML = `
+          <div class="status error">⛔ Chưa nhận hàng có mã <b>${escapeHtml(maId)}</b>. Vui lòng nhận hàng trước khi giao.</div>
+          <div class="card"><button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button></div>`;
+        return;
+      }
+      renderShipForm(maId, res);
+    })
+    .catch(function(err){
+      box.innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
+    });
+}
+
+function renderShipForm(maId, info){
+  const box = document.getElementById('result-giao');
+  const alreadyShipped = !!info.ngayGiao;
+  box.innerHTML = `
+    <div class="card">
+      <h2>2. Thông tin trong kho</h2>
+      <div class="ticket">
+        <span class="tag">TRONG KHO</span>
+        <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(info.lsx)}</span></div>
+        <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(info.stt)}</span></div>
+        <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(info.ten)}</span></div>
+        <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(info.sl)}</span></div>
+        <div class="ticket-row"><span class="label">Vị trí</span><span class="value">Kệ ${escapeHtml(info.soKe)} - Tầng ${escapeHtml(info.tang)}</span></div>
+        <div class="ticket-row"><span class="label">Ngày nhận</span><span class="value">${escapeHtml(info.ngayNhan||'-')}</span></div>
+        <span class="maid-pill">${escapeHtml(maId)}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>3. Xác nhận giao hàng</h2>
+      ${alreadyShipped ? '<div class="status warning">⚠️ Mã này đã được giao ngày '+escapeHtml(info.ngayGiao)+'. Xác nhận sẽ ghi đè ngày giao mới.</div>' : ''}
+      <div class="field"><label>Ngày giao</label><input type="date" id="in-ngaygiao" value="${todayStr()}"></div>
+      <button class="primary-btn" id="btn-save-giao" onclick="saveShip('${escapeHtml(maId)}', ${alreadyShipped})">Xác nhận giao</button>
+      <button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button>
+    </div>
+    <div id="status-giao"></div>
+  `;
+}
+
+function saveShip(maId, confirmOverwrite){
+  const payload = {
+    maId: maId,
+    ngayGiao: document.getElementById('in-ngaygiao').value,
+    confirmOverwrite: !!confirmOverwrite
+  };
+  const btn = document.getElementById('btn-save-giao');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Đang lưu...';
+
+  payload.action = 'ship';
+  callApi(payload)
+    .then(function(res){
+      btn.disabled = false;
+      btn.innerHTML = 'Xác nhận giao';
+      const statusBox = document.getElementById('status-giao');
+      if(res.success){
+        statusBox.innerHTML = '<div class="status success">✅ Đã cập nhật ngày giao cho mã '+escapeHtml(maId)+'.</div>';
+      } else if(res.alreadyShipped){
+        statusBox.innerHTML = `
+          <div class="status warning">⚠️ ${escapeHtml(res.message)}</div>
+          <div class="confirm-row">
+            <button class="confirm-yes" onclick="saveShip('${maId}', true)">Ghi đè ngày giao</button>
+            <button class="confirm-no" onclick="document.getElementById('status-giao').innerHTML=''">Hủy</button>
+          </div>`;
+      } else {
+        statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+      }
+    })
+    .catch(function(err){
+      btn.disabled = false;
+      btn.innerHTML = 'Xác nhận giao';
+      document.getElementById('status-giao').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
+    });
+}
+</script>
+</body>
+</html>
