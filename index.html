@@ -329,11 +329,11 @@
       margin-bottom:16px;
     }
     .summary-card{
-      flex:1 1 120px;
-      background:var(--card);
+      flex:1 1 90px;
+      background:var(--bg);
       border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px 16px;
+      border-radius:12px;
+      padding:10px 12px;
       text-align:center;
     }
     .summary-card .num{
@@ -354,14 +354,14 @@
     .summary-card.percent .num{color:var(--navy);}
     .summary-chart-card{
       flex:0 0 auto;
-      background:var(--card);
+      background:var(--bg);
       border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px 16px;
+      border-radius:12px;
+      padding:10px 14px;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:14px;
+      gap:12px;
     }
     .donut{
       width:80px;
@@ -398,6 +398,23 @@
       width:9px;height:9px;
       border-radius:2px;
       margin-right:6px;
+    }
+
+    .tra-top-row{
+      display:flex;
+      gap:20px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .tra-search-block{
+      flex:0 0 auto;
+    }
+    .tra-summary-block{
+      flex:1 1 auto;
+      min-width:0;
+    }
+    .tra-summary-block .summary-row{
+      margin-bottom:0;
     }
 
     .tra-search-row{
@@ -511,10 +528,15 @@
   <!-- ================= TRA CỨU ================= -->
   <div id="panel-tra" class="panel">
     <div class="card">
-      <h2>Tra cứu theo Lệnh sản xuất (LSX)</h2>
-      <div class="tra-search-row">
-        <input type="text" id="tra-lsx" placeholder="Nhập LSX, ví dụ: KDN.19/07">
-        <button class="primary-btn" onclick="submitTraCuu()">Tìm</button>
+      <div class="tra-top-row">
+        <div class="tra-search-block">
+          <h2>Tra cứu theo Lệnh sản xuất (LSX)</h2>
+          <div class="tra-search-row">
+            <input type="text" id="tra-lsx" placeholder="Nhập LSX, ví dụ: KDN.19/07">
+            <button class="primary-btn" onclick="submitTraCuu()">Tìm</button>
+          </div>
+        </div>
+        <div id="summary-tra" class="tra-summary-block"></div>
       </div>
     </div>
     <div id="result-tra"></div>
@@ -881,6 +903,7 @@ function submitTraCuu(){
   const lsx = document.getElementById('tra-lsx').value.trim();
   const box = document.getElementById('result-tra');
   if(!lsx){
+    document.getElementById('summary-tra').innerHTML = '';
     box.innerHTML = '<div class="status error">⛔ Vui lòng nhập LSX cần tra cứu.</div>';
     return;
   }
@@ -923,6 +946,7 @@ function buildSummaryHtml(total, shippedCount, unshippedCount, percent){
 function renderTraCuuResults(items){
   const box = document.getElementById('result-tra');
   if(!items || items.length === 0){
+    document.getElementById('summary-tra').innerHTML = '';
     box.innerHTML = '<div class="status error">⛔ Không tìm thấy chi tiết nào của LSX này.</div>';
     return;
   }
@@ -933,7 +957,7 @@ function renderTraCuuResults(items){
   }).length;
   const unshippedCount = total - shippedCount;
   const percent = total ? Math.round((shippedCount/total)*100) : 0;
-  const summaryHtml = buildSummaryHtml(total, shippedCount, unshippedCount, percent);
+  document.getElementById('summary-tra').innerHTML = buildSummaryHtml(total, shippedCount, unshippedCount, percent);
 
   const rows = items.map(function(it, i){
     const giaoHtml = (it.tongGiao > 0)
@@ -958,7 +982,7 @@ function renderTraCuuResults(items){
       </tr>`;
   }).join('');
 
-  box.innerHTML = summaryHtml + `
+  box.innerHTML = `
     <div class="card">
       <div class="tra-table-wrap">
         <table class="tra-table">
