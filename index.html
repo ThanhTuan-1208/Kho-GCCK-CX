@@ -277,15 +277,18 @@
     .tra-table-wrap{
       border:1px solid var(--border);
       border-radius:12px;
-      overflow:auto;
+      overflow-y:auto;
+      overflow-x:hidden;
       max-height:70vh;
     }
     .tra-table{
       width:100%;
+      table-layout:fixed;
       border-collapse:collapse;
-      font-size:12.5px;
+      font-size:10.5px;
       font-family:var(--mono);
-      white-space:nowrap;
+      white-space:normal;
+      word-break:break-word;
     }
     .tra-table thead th{
       position:sticky;
@@ -294,14 +297,16 @@
       color:#fff;
       font-family:var(--body);
       font-weight:600;
-      padding:10px 10px;
+      padding:6px 3px;
       text-align:center;
       z-index:1;
     }
     .tra-table tbody td{
-      padding:8px 10px;
+      padding:6px 3px;
       color:var(--navy);
       border-bottom:1px solid #E4E9F0;
+      text-align:center;
+    }
     }
     .tra-table tbody tr:nth-child(odd){background:#E9F1FE;}
     .tra-table tbody tr:nth-child(even){background:#F2F3F5;}
@@ -483,7 +488,7 @@ function submitManualNhan(){
     ten: document.getElementById('man-nhan-ten').value.trim(),
     sl: sl
   };
-  renderReceiveForm(data);
+  addToReceiveQueue(data);
 }
 
 function submitManualGiao(){
@@ -572,7 +577,7 @@ function onScanSuccess(tab, text){
     return;
   }
   if(tab === 'nhan'){
-    renderReceiveForm(data);
+    addToReceiveQueue(data);
   } else {
     if(!data.stt){
       showStatus(tab, 'error', 'Mã QR không có STT. Vui lòng dùng mục "nhập tay" bên dưới, nhập LSX và STT để tra cứu.');
@@ -600,62 +605,70 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
-/* ---------------- NHẬN HÀNG ---------------- */
+/* ---------------- NHẬN HÀNG (theo lô) ---------------- */
 
-function renderReceiveForm(data, opts){
-  opts = opts || {};
+function addToReceiveQueue(data){
+  if(!window.__receiveQueue) window.__receiveQueue = [];
+  window.__receiveQueue.push({
+    lsx: data.lsx, stt: data.stt, soDh: data.soDh||'', mact: data.mact||'',
+    ten: data.ten||'', sl: data.sl||'', slNhapKho: data.sl||''
+  });
+  renderReceiveQueue();
+}
+
+function removeFromQueue(idx){
+  window.__receiveQueue.splice(idx,1);
+  renderReceiveQueue();
+}
+
+function renderReceiveQueue(){
   const box = document.getElementById('result-nhan');
-  const sttRowHtml = data.stt
-    ? '<div class="ticket-row"><span class="label">STT</span><span class="value">'+escapeHtml(data.stt)+'</span></div>'
-    : '<div class="ticket-row"><span class="label">STT (nhập tay) *</span><span class="value"><input type="text" id="in-stt-manual" inputmode="numeric" style="width:90px;text-align:right;font-family:var(--mono);font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 6px;"></span></div>';
+  const queue = window.__receiveQueue || [];
+  if(!queue.length){ box.innerHTML = ''; return; }
+
+  const rows = queue.map(function(it, i){
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(it.lsx)}-${escapeHtml(it.stt)}</td>
+        <td>${escapeHtml(it.ten||'')}</td>
+        <td>${escapeHtml(it.sl||'')}</td>
+        <td><input type="text" inputmode="numeric" value="${escapeHtml(it.slNhapKho||'')}" style="width:55px;text-align:center;" onchange="window.__receiveQueue[${i}].slNhapKho=this.value"></td>
+        <td><button onclick="removeFromQueue(${i})" style="border:none;background:none;color:var(--red);font-weight:700;cursor:pointer;">✕</button></td>
+      </tr>`;
+  }).join('');
 
   box.innerHTML = `
     <div class="card">
-      <h2>2. Thông tin phiếu</h2>
-      <div class="ticket">
-        <span class="tag">PHIẾU</span>
-        <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(data.lsx)}</span></div>
-        ${sttRowHtml}
-        ${data.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(data.soDh)+'</span></div>' : ''}
-        ${data.mact ? '<div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">'+escapeHtml(data.mact)+'</span></div>' : ''}
-        ${data.ten ? '<div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">'+escapeHtml(data.ten)+'</span></div>' : ''}
-        ${data.sl ? '<div class="ticket-row"><span class="label">Số lượng</span><span class="value">'+escapeHtml(data.sl)+'</span></div>' : ''}
+      <h2>2. Danh sách đã quét (${queue.length} mã)</h2>
+      <div class="tra-table-wrap" style="max-height:40vh;">
+        <table class="tra-table">
+          <thead><tr><th>#</th><th>Mã ID</th><th>Tên chi tiết</th><th>SL đơn</th><th>SL nhập kho</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
     </div>
     <div class="card">
-      <h2>3. Vị trí lưu kho</h2>
-      <div class="field"><label>SL nhập kho (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slnhap" inputmode="numeric" value="${escapeHtml(data.sl||'')}"></div>
+      <h2>3. Vị trí lưu kho (áp dụng cho tất cả mã trên)</h2>
       <div class="field-row">
         <div class="field"><label>Số kệ</label><input type="text" id="in-soke" inputmode="numeric"></div>
         <div class="field"><label>Tầng</label><input type="text" id="in-tang" inputmode="numeric"></div>
       </div>
       <div class="field"><label>Ngày nhận</label><input type="date" id="in-ngaynhan" value="${todayStr()}"></div>
-      <button class="primary-btn" id="btn-save-nhan" onclick="saveReceive()">Lưu vào kho</button>
-      <button class="ghost-btn" onclick="startScan('nhan')">Quét mã khác</button>
+      <button class="primary-btn" id="btn-save-nhan" onclick="saveReceiveBatch()">Lưu tất cả vào kho</button>
+      <button class="ghost-btn" onclick="startScan('nhan')">Quét tiếp</button>
     </div>
     <div id="status-nhan"></div>
   `;
-  window.__currentReceiveData = data;
 }
 
-function saveReceive(confirmDuplicate){
-  const data = window.__currentReceiveData;
-  const sttManualEl = document.getElementById('in-stt-manual');
-  const stt = data.stt || (sttManualEl ? sttManualEl.value.trim() : '');
-
-  if(!stt){
-    document.getElementById('status-nhan').innerHTML = '<div class="status error">⛔ Vui lòng nhập STT trước khi lưu.</div>';
-    return;
-  }
+function saveReceiveBatch(confirmDuplicate){
+  const queue = window.__receiveQueue || [];
+  if(!queue.length) return;
 
   const payload = {
-    lsx: data.lsx,
-    stt: stt,
-    soDh: data.soDh || '',
-    mact: data.mact || '',
-    ten: data.ten || '',
-    sl: data.sl || '',
-    slNhapKho: document.getElementById('in-slnhap').value,
+    action: 'receiveBatch',
+    items: queue,
     soKe: document.getElementById('in-soke').value,
     tang: document.getElementById('in-tang').value,
     ngayNhan: document.getElementById('in-ngaynhan').value,
@@ -665,20 +678,20 @@ function saveReceive(confirmDuplicate){
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Đang lưu...';
 
-  payload.action = 'receive';
   callApi(payload)
     .then(function(res){
       btn.disabled = false;
-      btn.innerHTML = 'Lưu vào kho';
+      btn.innerHTML = 'Lưu tất cả vào kho';
       const statusBox = document.getElementById('status-nhan');
       if(res.success){
-        statusBox.innerHTML = '<div class="status success">✅ Đã lưu vào kho. Mã ID: <b>'+escapeHtml(res.maId)+'</b></div>';
+        statusBox.innerHTML = '<div class="status success">✅ Đã lưu '+res.count+' mã vào kho.</div>';
+        window.__receiveQueue = [];
+        setTimeout(function(){ document.getElementById('result-nhan').innerHTML=''; }, 1500);
       } else if(res.duplicate){
         statusBox.innerHTML = `
-          <div class="status warning">⚠️ ${escapeHtml(res.message)}
-          </div>
+          <div class="status warning">⚠️ ${escapeHtml(res.message)}</div>
           <div class="confirm-row">
-            <button class="confirm-yes" onclick="saveReceive(true)">Vẫn thêm mới</button>
+            <button class="confirm-yes" onclick="saveReceiveBatch(true)">Vẫn thêm mới</button>
             <button class="confirm-no" onclick="document.getElementById('status-nhan').innerHTML=''">Hủy</button>
           </div>`;
       } else {
@@ -687,8 +700,8 @@ function saveReceive(confirmDuplicate){
     })
     .catch(function(err){
       btn.disabled = false;
-      btn.innerHTML = 'Lưu vào kho';
-      document.getElementById('status-nhan').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
+      btn.innerHTML = 'Lưu tất cả vào kho';
+      document.getElementById('status-nhan').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
     });
 }
 
@@ -719,7 +732,6 @@ function lookupForShip(maId, data){
 
 function renderShipForm(maId, info){
   const box = document.getElementById('result-giao');
-  const alreadyShipped = !!info.ngayGiao;
   box.innerHTML = `
     <div class="card">
       <h2>2. Thông tin trong kho</h2>
@@ -729,50 +741,41 @@ function renderShipForm(maId, info){
         <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(info.stt)}</span></div>
         ${info.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(info.soDh)+'</span></div>' : ''}
         <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(info.ten)}</span></div>
-        <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(info.sl)}</span></div>
+        <div class="ticket-row"><span class="label">Số lượng đơn</span><span class="value">${escapeHtml(info.sl)}</span></div>
         <div class="ticket-row"><span class="label">Vị trí</span><span class="value">Kệ ${escapeHtml(info.soKe)} - Tầng ${escapeHtml(info.tang)}</span></div>
-        <div class="ticket-row"><span class="label">Ngày nhận</span><span class="value">${escapeHtml(info.ngayNhan||'-')}</span></div>
+        <div class="ticket-row"><span class="label">Tình trạng giao</span><span class="value">${escapeHtml(info.statusGiao||'Chưa giao')}</span></div>
         <span class="maid-pill">${escapeHtml(maId)}</span>
       </div>
     </div>
     <div class="card">
-      <h2>3. Xác nhận giao hàng</h2>
-      ${alreadyShipped ? '<div class="status warning">⚠️ Mã này đã được giao ngày '+escapeHtml(info.ngayGiao)+'. Xác nhận sẽ ghi đè ngày giao mới.</div>' : ''}
-      <div class="field"><label>SL giao (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slgiao" inputmode="numeric" value="${escapeHtml(info.sl||'')}"></div>
+      <h2>3. Xác nhận giao hàng (lần này)</h2>
+      <div class="field"><label>SL giao lần này (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slgiao" inputmode="numeric" value="${escapeHtml(info.sl||'')}"></div>
       <div class="field"><label>Ngày giao</label><input type="date" id="in-ngaygiao" value="${todayStr()}"></div>
-      <button class="primary-btn" id="btn-save-giao" onclick="saveShip('${escapeHtml(maId)}', ${alreadyShipped})">Xác nhận giao</button>
+      <button class="primary-btn" id="btn-save-giao" onclick="saveShip('${escapeHtml(maId)}')">Xác nhận giao</button>
       <button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button>
     </div>
     <div id="status-giao"></div>
   `;
 }
 
-function saveShip(maId, confirmOverwrite){
+function saveShip(maId){
   const payload = {
+    action: 'ship',
     maId: maId,
     slGiao: document.getElementById('in-slgiao').value,
-    ngayGiao: document.getElementById('in-ngaygiao').value,
-    confirmOverwrite: !!confirmOverwrite
+    ngayGiao: document.getElementById('in-ngaygiao').value
   };
   const btn = document.getElementById('btn-save-giao');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Đang lưu...';
 
-  payload.action = 'ship';
   callApi(payload)
     .then(function(res){
       btn.disabled = false;
       btn.innerHTML = 'Xác nhận giao';
       const statusBox = document.getElementById('status-giao');
       if(res.success){
-        statusBox.innerHTML = '<div class="status success">✅ Đã cập nhật ngày giao cho mã '+escapeHtml(maId)+'.</div>';
-      } else if(res.alreadyShipped){
-        statusBox.innerHTML = `
-          <div class="status warning">⚠️ ${escapeHtml(res.message)}</div>
-          <div class="confirm-row">
-            <button class="confirm-yes" onclick="saveShip('${maId}', true)">Ghi đè ngày giao</button>
-            <button class="confirm-no" onclick="document.getElementById('status-giao').innerHTML=''">Hủy</button>
-          </div>`;
+        statusBox.innerHTML = '<div class="status success">✅ Đã ghi nhận giao hàng. Tình trạng: <b>'+escapeHtml(res.statusGiao)+'</b></div>';
       } else {
         statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
       }
@@ -814,8 +817,8 @@ function renderTraCuuResults(items){
     return;
   }
   const rows = items.map(function(it, i){
-    const giaoHtml = it.ngayGiao
-      ? '<span class="shipped">Đã giao ngày '+escapeHtml(it.ngayGiao)+'</span>'
+    const giaoHtml = (it.tongGiao > 0)
+      ? '<span class="shipped">'+escapeHtml(it.statusGiao||'')+'</span>'
       : '<span class="not-shipped">Chưa giao</span>';
     return `
       <tr>
@@ -827,7 +830,7 @@ function renderTraCuuResults(items){
         <td>${escapeHtml(it.ten||'')}</td>
         <td>${escapeHtml(it.sl||'')}</td>
         <td>${escapeHtml(it.slNhapKho || it.sl || '')}</td>
-        <td>${escapeHtml(it.slDaGiao || (it.ngayGiao ? it.sl : '') || '')}</td>
+        <td>${escapeHtml(it.tongGiao || 0)}</td>
         <td>${escapeHtml(it.maId||'')}</td>
         <td>${escapeHtml(it.soKe||'')}</td>
         <td>${escapeHtml(it.tang||'')}</td>
@@ -843,7 +846,7 @@ function renderTraCuuResults(items){
           <thead>
             <tr>
               <th>STT</th><th>LSX</th><th>STT CT</th><th>Số ĐH</th><th>Mã CT</th>
-              <th>Tên chi tiết</th><th>SL</th><th>SL nhập kho</th><th>SL đã giao</th><th>Mã ID</th><th>Số kệ</th><th>Tầng</th>
+              <th>Tên chi tiết</th><th>SL</th><th>SL nhập</th><th>Tổng đã giao</th><th>Mã ID</th><th>Số kệ</th><th>Tầng</th>
               <th>Ngày nhận</th><th>Tình trạng giao</th>
             </tr>
           </thead>
