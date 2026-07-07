@@ -464,6 +464,7 @@
     <button class="tab-btn active" onclick="switchTab('nhan')">📥 Nhận</button>
     <button class="tab-btn" onclick="switchTab('giao')">📤 Giao</button>
     <button class="tab-btn" onclick="switchTab('tra')">🔍 Tra cứu</button>
+    <button class="tab-btn" onclick="switchTab('lichsu')">🕘 Lịch sử</button>
   </div>
 </header>
 
@@ -538,6 +539,18 @@
     <div id="result-tra"></div>
   </div>
 
+  <!-- ================= LỊCH SỬ ================= -->
+  <div id="panel-lichsu" class="panel">
+    <div class="card">
+      <h2>Lịch sử giao nhận (500 gần nhất)</h2>
+      <div class="tra-search-row">
+        <input type="text" id="lichsu-search" placeholder="Tìm theo LSX, mã, tên chi tiết..." oninput="filterHistory()" style="flex:1 1 auto;">
+        <button class="ghost-btn" style="width:auto;margin-top:0;" onclick="loadHistory()">↻ Tải lại</button>
+      </div>
+    </div>
+    <div id="result-lichsu"></div>
+  </div>
+
 </main>
 
 <script>
@@ -567,6 +580,7 @@ function switchTab(tab){
   event.currentTarget.classList.add('active');
   // dừng camera của tab còn lại để tránh 2 camera cùng chạy
   ['nhan','giao'].filter(t=>t!==tab).forEach(t=>stopScan(t));
+  if(tab === 'lichsu') loadHistory();
 }
 
 function todayStr(){
@@ -1001,6 +1015,154 @@ function renderTraCuuResults(items){
         </table>
       </div>
     </div>`;
+}
+
+/* ---------------- LỊCH SỬ ---------------- */
+
+function loadHistory(){
+  const box = document.getElementById('result-lichsu');
+  box.innerHTML = '<div class="card"><div class="empty-hint"><span class="spinner"></span><br>Đang tải lịch sử...</div></div>';
+
+  callApi({ action: 'getHistory' })
+    .then(function(res){
+      if(!res.success){
+        box.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+        return;
+      }
+      // Gắn tên chi tiết cho các dòng "giao" bằng cách tra trong các dòng "nhận" cùng Mã ID
+      const nhanByMaId = {};
+      res.items.forEach(function(it){
+        if(it.type === 'nhan') nhanByMaId[it.maId] = it;
+      });
+      res.items.forEach(function(it){
+        if(it.type === 'giao'){
+          const ref = nhanByMaId[it.maId];
+          it.ten = ref ? ref.ten : '';
+          it.lsx = ref ? ref.lsx : (it.maId||'').split('-')[0];
+          it.stt = ref ? ref.stt : (it.maId||'').split('-').slice(1).join('-');
+        }
+      });
+      window.__historyData = res.items;
+      renderHistoryTable(res.items);
+    })
+    .catch(function(err){
+      box.innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
+    });
+}
+
+function normalizeSearch(s){
+  return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+function filterHistory(){
+  const kw = normalizeSearch(document.getElementById('lichsu-search').value);
+  const all = window.__historyData || [];
+  if(!kw){ renderHistoryTable(all); return; }
+  const filtered = all.filter(function(it){
+    const haystack = normalizeSearch([it.maId, it.lsx, it.stt, it.ten, it.mact, it.soDh].join(' '));
+    return haystack.indexOf(kw) !== -1;
+  });
+  renderHistoryTable(filtered);
+}
+
+function renderHistoryTable(items){
+  const box = document.getElementById('result-lichsu');
+  if(!items || !items.length){
+    box.innerHTML = '<div class="card"><div class="empty-hint">Không có dữ liệu.</div></div>';
+    return;
+  }
+
+  const rows = items.map(function(it, i){
+    const idAttr = it.type + '-' + it.row;
+    if(it.type === 'nhan'){
+      return `
+        <tr>
+          <td>${i+1}</td>
+          <td><span class="maid-pill" style="margin-top:0;">NHẬN</span></td>
+          <td>${escapeHtml(it.lsx)}-${escapeHtml(it.stt)}</td>
+          <td>${escapeHtml(it.ten||'')}</td>
+          <td><input type="text" inputmode="numeric" value="${escapeHtml(it.slNhapKho||it.sl||'')}" style="width:60px;text-align:center;" id="h-sl-${idAttr}"></td>
+          <td><input type="date" value="${escapeHtml(it.ngayNhan||'')}" style="width:130px;" id="h-ngay-${idAttr}"></td>
+          <td style="display:flex;gap:6px;justify-content:center;">
+            <button onclick="saveHistoryEdit('nhan', ${it.row})" style="border:none;background:var(--green-bg);color:#0F5C2E;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;">Lưu</button>
+            <button onclick="deleteHistoryRow('nhan', ${it.row})" style="border:none;background:var(--red-bg);color:#8A1F1F;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;">Xóa</button>
+          </td>
+        </tr>`;
+    } else {
+      return `
+        <tr>
+          <td>${i+1}</td>
+          <td><span class="maid-pill" style="margin-top:0;background:var(--amber);color:var(--navy);">GIAO</span></td>
+          <td>${escapeHtml(it.maId||'')}</td>
+          <td>${escapeHtml(it.ten||'')}</td>
+          <td><input type="text" inputmode="numeric" value="${escapeHtml(it.slGiao||'')}" style="width:60px;text-align:center;" id="h-sl-${idAttr}"></td>
+          <td><input type="date" value="${escapeHtml(it.ngayGiao||'')}" style="width:130px;" id="h-ngay-${idAttr}"></td>
+          <td style="display:flex;gap:6px;justify-content:center;">
+            <button onclick="saveHistoryEdit('giao', ${it.row})" style="border:none;background:var(--green-bg);color:#0F5C2E;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;">Lưu</button>
+            <button onclick="deleteHistoryRow('giao', ${it.row})" style="border:none;background:var(--red-bg);color:#8A1F1F;padding:6px 10px;border-radius:8px;font-weight:600;cursor:pointer;">Xóa</button>
+          </td>
+        </tr>`;
+    }
+  }).join('');
+
+  box.innerHTML = `
+    <div class="card">
+      <div class="tra-table-wrap" style="max-height:65vh;">
+        <table class="tra-table">
+          <thead><tr><th>#</th><th>Loại</th><th>Mã ID</th><th>Tên chi tiết</th><th>SL</th><th>Ngày</th><th>Thao tác</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+    <div id="status-lichsu"></div>
+  `;
+}
+
+function saveHistoryEdit(type, row){
+  const idAttr = type + '-' + row;
+  const sl = document.getElementById('h-sl-'+idAttr).value.trim();
+  const ngay = document.getElementById('h-ngay-'+idAttr).value;
+  const item = (window.__historyData||[]).find(function(it){ return it.type===type && it.row===row; });
+  if(!item) return;
+
+  let payload;
+  if(type === 'nhan'){
+    payload = {
+      action: 'updateNhan', row: row,
+      lsx: item.lsx, stt: item.stt, soDh: item.soDh, mact: item.mact, ten: item.ten,
+      sl: item.sl, slNhapKho: sl, soKe: item.soKe, tang: item.tang, ngayNhan: ngay
+    };
+  } else {
+    payload = { action: 'updateGiao', row: row, maId: item.maId, ngayGiao: ngay, slGiao: sl };
+  }
+
+  callApi(payload).then(function(res){
+    const statusBox = document.getElementById('status-lichsu');
+    if(res.success){
+      statusBox.innerHTML = '<div class="status success">✅ Đã lưu thay đổi.</div>';
+      loadHistory();
+    } else {
+      statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+    }
+  }).catch(function(err){
+    document.getElementById('status-lichsu').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
+  });
+}
+
+function deleteHistoryRow(type, row){
+  if(!confirm('Xóa dòng này khỏi lịch sử? Không thể hoàn tác.')) return;
+  const action = type === 'nhan' ? 'deleteNhan' : 'deleteGiao';
+  callApi({ action: action, row: row }).then(function(res){
+    const statusBox = document.getElementById('status-lichsu');
+    if(res.success){
+      statusBox.innerHTML = '<div class="status success">✅ Đã xóa.</div>';
+      loadHistory();
+    } else {
+      statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+    }
+  }).catch(function(err){
+    document.getElementById('status-lichsu').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
+  });
 }
 </script>
 </body>
