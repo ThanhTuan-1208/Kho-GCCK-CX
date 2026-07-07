@@ -273,6 +273,40 @@
       display:inline-block;
     }
     @keyframes spin{to{transform:rotate(360deg);}}
+
+    .tra-table-wrap{
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:auto;
+      max-height:70vh;
+    }
+    .tra-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12.5px;
+      font-family:var(--mono);
+      white-space:nowrap;
+    }
+    .tra-table thead th{
+      position:sticky;
+      top:0;
+      background:var(--navy);
+      color:#fff;
+      font-family:var(--body);
+      font-weight:600;
+      padding:10px 10px;
+      text-align:left;
+      z-index:1;
+    }
+    .tra-table tbody td{
+      padding:8px 10px;
+      color:var(--navy);
+      border-bottom:1px solid #E4E9F0;
+    }
+    .tra-table tbody tr:nth-child(odd){background:#E9F1FE;}
+    .tra-table tbody tr:nth-child(even){background:#F2F3F5;}
+    .tra-table .shipped{color:var(--green);font-weight:600;}
+    .tra-table .not-shipped{color:var(--amber-dark);font-weight:600;}
   </style>
 </head>
 <body>
@@ -738,24 +772,42 @@ function renderTraCuuResults(items){
     box.innerHTML = '<div class="status error">⛔ Không tìm thấy chi tiết nào của LSX này.</div>';
     return;
   }
-  box.innerHTML = items.map(function(it){
+  const rows = items.map(function(it, i){
+    const giaoHtml = it.ngayGiao
+      ? '<span class="shipped">Đã giao ngày '+escapeHtml(it.ngayGiao)+'</span>'
+      : '<span class="not-shipped">Chưa giao</span>';
     return `
-      <div class="card">
-        <div class="ticket">
-          <span class="tag">${escapeHtml(it.maId||'')}</span>
-          <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(it.lsx)}</span></div>
-          <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(it.stt)}</span></div>
-          ${it.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(it.soDh)+'</span></div>' : ''}
-          ${it.mact ? '<div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">'+escapeHtml(it.mact)+'</span></div>' : ''}
-          <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(it.ten||'')}</span></div>
-          <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(it.sl||'')}</span></div>
-          <div class="ticket-row"><span class="label">Số kệ</span><span class="value">${escapeHtml(it.soKe||'-')}</span></div>
-          <div class="ticket-row"><span class="label">Tầng</span><span class="value">${escapeHtml(it.tang||'-')}</span></div>
-          <div class="ticket-row"><span class="label">Ngày nhận</span><span class="value">${escapeHtml(it.ngayNhan||'-')}</span></div>
-          <div class="ticket-row"><span class="label">Ngày giao</span><span class="value">${escapeHtml(it.ngayGiao||'Chưa giao')}</span></div>
-        </div>
-      </div>`;
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(it.lsx||'')}</td>
+        <td>${escapeHtml(it.stt||'')}</td>
+        <td>${escapeHtml(it.soDh||'')}</td>
+        <td>${escapeHtml(it.mact||'')}</td>
+        <td>${escapeHtml(it.ten||'')}</td>
+        <td>${escapeHtml(it.sl||'')}</td>
+        <td>${escapeHtml(it.maId||'')}</td>
+        <td>${escapeHtml(it.soKe||'')}</td>
+        <td>${escapeHtml(it.tang||'')}</td>
+        <td>${escapeHtml(it.ngayNhan||'')}</td>
+        <td>${giaoHtml}</td>
+      </tr>`;
   }).join('');
+
+  box.innerHTML = `
+    <div class="card">
+      <div class="tra-table-wrap">
+        <table class="tra-table">
+          <thead>
+            <tr>
+              <th>STT</th><th>LSX</th><th>STT CT</th><th>Số ĐH</th><th>Mã CT</th>
+              <th>Tên chi tiết</th><th>SL</th><th>Mã ID</th><th>Số kệ</th><th>Tầng</th>
+              <th>Ngày nhận</th><th>Tình trạng giao</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 </script>
 </body>
