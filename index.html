@@ -295,7 +295,7 @@
       font-family:var(--body);
       font-weight:600;
       padding:10px 10px;
-      text-align:left;
+      text-align:center;
       z-index:1;
     }
     .tra-table tbody td{
@@ -308,16 +308,15 @@
     .tra-table .shipped{color:var(--green);font-weight:600;}
     .tra-table .not-shipped{color:var(--amber-dark);font-weight:600;}
 
-    /* Kẻ dọc phân cột màu xanh (giữa LSX -> STT CT -> Số ĐH -> Mã CT -> Tên chi tiết) */
-    .tra-table th:nth-child(3),
-    .tra-table th:nth-child(4),
-    .tra-table th:nth-child(5),
-    .tra-table th:nth-child(6),
-    .tra-table td:nth-child(3),
-    .tra-table td:nth-child(4),
-    .tra-table td:nth-child(5),
-    .tra-table td:nth-child(6){
-      border-left:2px solid #4A86E8;
+    /* Căn giữa dữ liệu + kẻ đường dọc mỏng cho tất cả các cột */
+    .tra-table th,
+    .tra-table td{
+      text-align:center;
+      border-left:1px solid #B9C4D4;
+    }
+    .tra-table th:first-child,
+    .tra-table td:first-child{
+      border-left:none;
     }
 
     .tra-search-row{
@@ -625,6 +624,7 @@ function renderReceiveForm(data, opts){
     </div>
     <div class="card">
       <h2>3. Vị trí lưu kho</h2>
+      <div class="field"><label>SL nhập kho (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slnhap" inputmode="numeric" value="${escapeHtml(data.sl||'')}"></div>
       <div class="field-row">
         <div class="field"><label>Số kệ</label><input type="text" id="in-soke" inputmode="numeric"></div>
         <div class="field"><label>Tầng</label><input type="text" id="in-tang" inputmode="numeric"></div>
@@ -655,6 +655,7 @@ function saveReceive(confirmDuplicate){
     mact: data.mact || '',
     ten: data.ten || '',
     sl: data.sl || '',
+    slNhapKho: document.getElementById('in-slnhap').value,
     soKe: document.getElementById('in-soke').value,
     tang: document.getElementById('in-tang').value,
     ngayNhan: document.getElementById('in-ngaynhan').value,
@@ -737,6 +738,7 @@ function renderShipForm(maId, info){
     <div class="card">
       <h2>3. Xác nhận giao hàng</h2>
       ${alreadyShipped ? '<div class="status warning">⚠️ Mã này đã được giao ngày '+escapeHtml(info.ngayGiao)+'. Xác nhận sẽ ghi đè ngày giao mới.</div>' : ''}
+      <div class="field"><label>SL giao (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slgiao" inputmode="numeric" value="${escapeHtml(info.sl||'')}"></div>
       <div class="field"><label>Ngày giao</label><input type="date" id="in-ngaygiao" value="${todayStr()}"></div>
       <button class="primary-btn" id="btn-save-giao" onclick="saveShip('${escapeHtml(maId)}', ${alreadyShipped})">Xác nhận giao</button>
       <button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button>
@@ -748,6 +750,7 @@ function renderShipForm(maId, info){
 function saveShip(maId, confirmOverwrite){
   const payload = {
     maId: maId,
+    slGiao: document.getElementById('in-slgiao').value,
     ngayGiao: document.getElementById('in-ngaygiao').value,
     confirmOverwrite: !!confirmOverwrite
   };
@@ -823,6 +826,8 @@ function renderTraCuuResults(items){
         <td>${escapeHtml(it.mact||'')}</td>
         <td>${escapeHtml(it.ten||'')}</td>
         <td>${escapeHtml(it.sl||'')}</td>
+        <td>${escapeHtml(it.slNhapKho || it.sl || '')}</td>
+        <td>${escapeHtml(it.slDaGiao || (it.ngayGiao ? it.sl : '') || '')}</td>
         <td>${escapeHtml(it.maId||'')}</td>
         <td>${escapeHtml(it.soKe||'')}</td>
         <td>${escapeHtml(it.tang||'')}</td>
@@ -838,7 +843,7 @@ function renderTraCuuResults(items){
           <thead>
             <tr>
               <th>STT</th><th>LSX</th><th>STT CT</th><th>Số ĐH</th><th>Mã CT</th>
-              <th>Tên chi tiết</th><th>SL</th><th>Mã ID</th><th>Số kệ</th><th>Tầng</th>
+              <th>Tên chi tiết</th><th>SL</th><th>SL nhập kho</th><th>SL đã giao</th><th>Mã ID</th><th>Số kệ</th><th>Tầng</th>
               <th>Ngày nhận</th><th>Tình trạng giao</th>
             </tr>
           </thead>
