@@ -308,6 +308,18 @@
     .tra-table .shipped{color:var(--green);font-weight:600;}
     .tra-table .not-shipped{color:var(--amber-dark);font-weight:600;}
 
+    /* Kẻ dọc phân cột màu xanh (giữa LSX -> STT CT -> Số ĐH -> Mã CT -> Tên chi tiết) */
+    .tra-table th:nth-child(3),
+    .tra-table th:nth-child(4),
+    .tra-table th:nth-child(5),
+    .tra-table th:nth-child(6),
+    .tra-table td:nth-child(3),
+    .tra-table td:nth-child(4),
+    .tra-table td:nth-child(5),
+    .tra-table td:nth-child(6){
+      border-left:2px solid #4A86E8;
+    }
+
     .tra-search-row{
       display:flex;
       gap:10px;
