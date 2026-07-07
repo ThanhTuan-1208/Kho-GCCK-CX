@@ -514,13 +514,18 @@
       </div>
       <div class="manual-toggle" onclick="toggleManual('giao')">hoặc nhập tay (không quét QR)</div>
       <div class="manual-box" id="manual-giao">
-        <div class="field-row">
-          <div class="field"><label>LSX *</label><input type="text" id="man-giao-lsx"></div>
-          <div class="field"><label>STT *</label><input type="text" id="man-giao-stt" inputmode="numeric"></div>
-        </div>
-        <button class="primary-btn" onclick="submitManualGiao()">Tra cứu</button>
-      </div>
-    </div>
+  <div class="field-row">
+    <div class="field"><label>LSX *</label><input type="text" id="man-giao-lsx"></div>
+    <div class="field"><label>STT *</label><input type="text" id="man-giao-stt" inputmode="numeric"></div>
+  </div>
+  <div class="field"><label>Số ĐH</label><input type="text" id="man-giao-sodh"></div>
+  <div class="field-row">
+    <div class="field"><label>Mã chi tiết</label><input type="text" id="man-giao-mact"></div>
+    <div class="field"><label>Tên chi tiết</label><input type="text" id="man-giao-ten"></div>
+  </div>
+  <div class="field"><label>Số lượng *</label><input type="text" id="man-giao-sl" inputmode="numeric"></div>
+  <button class="primary-btn" onclick="submitManualGiao()">Dùng thông tin này</button>
+</div>
 
     <div id="result-giao"></div>
   </div>
@@ -605,11 +610,20 @@ function submitManualNhan(){
 function submitManualGiao(){
   const lsx = document.getElementById('man-giao-lsx').value.trim();
   const stt = document.getElementById('man-giao-stt').value.trim();
-  if(!lsx || !stt){
-    showStatus('giao', 'error', 'Vui lòng nhập đủ LSX và STT.');
+  const sl  = document.getElementById('man-giao-sl').value.trim();
+  if(!lsx || !stt || !sl){
+    showStatus('giao', 'error', 'Vui lòng nhập đủ LSX, STT và Số lượng.');
     return;
   }
-  lookupForShip(lsx + '-' + stt, { lsx: lsx, stt: stt });
+  const data = {
+    lsx: lsx,
+    stt: stt,
+    soDh: document.getElementById('man-giao-sodh').value.trim(),
+    mact: document.getElementById('man-giao-mact').value.trim(),
+    ten: document.getElementById('man-giao-ten').value.trim(),
+    sl: sl
+  };
+  addToShipQueue(data);
 }
 
 function startScan(tab){
@@ -691,11 +705,10 @@ function onScanSuccess(tab, text){
     addToReceiveQueue(data);
   } else {
     if(!data.stt){
-      showStatus(tab, 'error', 'Mã QR không có STT. Vui lòng dùng mục "nhập tay" bên dưới, nhập LSX và STT để tra cứu.');
+      showStatus(tab, 'error', 'Mã QR không có STT. Vui lòng dùng mục "nhập tay" bên dưới, nhập LSX và STT.');
       return;
     }
-    const maId = data.lsx + '-' + data.stt;
-    lookupForShip(maId, data);
+    addToShipQueue(data);
   }
 }
 
@@ -818,63 +831,68 @@ function saveReceiveBatch(confirmDuplicate){
 
 /* ---------------- GIAO HÀNG ---------------- */
 
-function lookupForShip(maId, data){
-  const box = document.getElementById('result-giao');
-  box.innerHTML = '<div class="card"><div class="empty-hint"><span class="spinner"></span><br>Đang tra cứu mã '+escapeHtml(maId)+' ...</div></div>';
+/* ---------------- GIAO HÀNG (theo lô) ---------------- */
 
-  callApi({ action: 'search', maId: maId })
-    .then(function(res){
-      if(!res.success){
-        box.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
-        return;
-      }
-      if(!res.found){
-        box.innerHTML = `
-          <div class="status error">⛔ Chưa nhận hàng có mã <b>${escapeHtml(maId)}</b>. Vui lòng nhận hàng trước khi giao.</div>
-          <div class="card"><button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button></div>`;
-        return;
-      }
-      renderShipForm(maId, res);
-    })
-    .catch(function(err){
-      box.innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
-    });
+function addToShipQueue(data){
+  if(!window.__shipQueue) window.__shipQueue = [];
+  window.__shipQueue.push({
+    lsx: data.lsx, stt: data.stt, soDh: data.soDh||'', mact: data.mact||'',
+    ten: data.ten||'', sl: data.sl||'', slGiao: data.sl||''
+  });
+  renderShipQueue();
 }
 
-function renderShipForm(maId, info){
+function removeFromShipQueue(idx){
+  window.__shipQueue.splice(idx,1);
+  renderShipQueue();
+}
+
+function renderShipQueue(){
   const box = document.getElementById('result-giao');
+  const queue = window.__shipQueue || [];
+  if(!queue.length){ box.innerHTML = ''; return; }
+
+  const rows = queue.map(function(it, i){
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(it.lsx)}-${escapeHtml(it.stt)}</td>
+        <td>${escapeHtml(it.ten||'')}</td>
+        <td>${escapeHtml(it.sl||'')}</td>
+        <td><input type="text" inputmode="numeric" value="${escapeHtml(it.slGiao||'')}" style="width:55px;text-align:center;" onchange="window.__shipQueue[${i}].slGiao=this.value"></td>
+        <td><button onclick="removeFromShipQueue(${i})" style="border:none;background:none;color:var(--red);font-weight:700;cursor:pointer;">✕</button></td>
+      </tr>`;
+  }).join('');
+
   box.innerHTML = `
     <div class="card">
-      <h2>2. Thông tin trong kho</h2>
-      <div class="ticket">
-        <span class="tag">TRONG KHO</span>
-        <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(info.lsx)}</span></div>
-        <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(info.stt)}</span></div>
-        ${info.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(info.soDh)+'</span></div>' : ''}
-        <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(info.ten)}</span></div>
-        <div class="ticket-row"><span class="label">Số lượng đơn</span><span class="value">${escapeHtml(info.sl)}</span></div>
-        <div class="ticket-row"><span class="label">Vị trí</span><span class="value">Kệ ${escapeHtml(info.soKe)} - Tầng ${escapeHtml(info.tang)}</span></div>
-        <div class="ticket-row"><span class="label">Tình trạng giao</span><span class="value">${escapeHtml(info.statusGiao||'Chưa giao')}</span></div>
-        <span class="maid-pill">${escapeHtml(maId)}</span>
+      <h2>2. Danh sách đã quét chờ giao (${queue.length} mã)</h2>
+      <div class="tra-table-wrap" style="max-height:40vh;">
+        <table class="tra-table">
+          <thead><tr><th>#</th><th>Mã ID</th><th>Tên chi tiết</th><th>SL đơn</th><th>SL giao</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
     </div>
     <div class="card">
-      <h2>3. Xác nhận giao hàng (lần này)</h2>
-      <div class="field"><label>SL giao lần này (mặc định = SL đơn hàng, sửa nếu khác)</label><input type="text" id="in-slgiao" inputmode="numeric" value="${escapeHtml(info.sl||'')}"></div>
+      <h2>3. Xác nhận giao</h2>
       <div class="field"><label>Ngày giao</label><input type="date" id="in-ngaygiao" value="${todayStr()}"></div>
-      <button class="primary-btn" id="btn-save-giao" onclick="saveShip('${escapeHtml(maId)}')">Xác nhận giao</button>
-      <button class="ghost-btn" onclick="startScan('giao')">Quét mã khác</button>
+      <button class="primary-btn" id="btn-save-giao" onclick="saveShipBatch()">Lưu tất cả</button>
+      <button class="ghost-btn" onclick="startScan('giao')">Quét tiếp</button>
     </div>
     <div id="status-giao"></div>
   `;
 }
 
-function saveShip(maId){
+function saveShipBatch(confirmSkip){
+  const queue = window.__shipQueue || [];
+  if(!queue.length) return;
+
   const payload = {
-    action: 'ship',
-    maId: maId,
-    slGiao: document.getElementById('in-slgiao').value,
-    ngayGiao: document.getElementById('in-ngaygiao').value
+    action: 'shipBatch',
+    items: queue,
+    ngayGiao: document.getElementById('in-ngaygiao').value,
+    confirmSkip: !!confirmSkip
   };
   const btn = document.getElementById('btn-save-giao');
   btn.disabled = true;
@@ -883,18 +901,27 @@ function saveShip(maId){
   callApi(payload)
     .then(function(res){
       btn.disabled = false;
-      btn.innerHTML = 'Xác nhận giao';
+      btn.innerHTML = 'Lưu tất cả';
       const statusBox = document.getElementById('status-giao');
       if(res.success){
-        statusBox.innerHTML = '<div class="status success">✅ Đã ghi nhận giao hàng. Tình trạng: <b>'+escapeHtml(res.statusGiao)+'</b></div>';
+        statusBox.innerHTML = '<div class="status success">✅ Đã ghi nhận giao '+res.count+' mã.</div>';
+        window.__shipQueue = [];
+        setTimeout(function(){ document.getElementById('result-giao').innerHTML=''; }, 1500);
+      } else if(res.missing){
+        statusBox.innerHTML = `
+          <div class="status warning">⚠️ ${escapeHtml(res.message)}</div>
+          <div class="confirm-row">
+            <button class="confirm-yes" onclick="saveShipBatch(true)">Bỏ qua mã chưa nhận, lưu phần còn lại</button>
+            <button class="confirm-no" onclick="document.getElementById('status-giao').innerHTML=''">Hủy</button>
+          </div>`;
       } else {
         statusBox.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
       }
     })
     .catch(function(err){
       btn.disabled = false;
-      btn.innerHTML = 'Xác nhận giao';
-      document.getElementById('status-giao').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
+      btn.innerHTML = 'Lưu tất cả';
+      document.getElementById('status-giao').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
     });
 }
 /* ---------------- TRA CỨU ---------------- */
