@@ -144,25 +144,8 @@
       cursor:pointer;
       text-decoration:underline;
     }
-    .manual-box{display:none;margin-top:10px;gap:8px;}
-    .manual-box.show{display:flex;}
-    .manual-box input{
-      flex:1;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      font-family:var(--mono);
-      font-size:13px;
-    }
-    .manual-box button{
-      padding:10px 14px;
-      border-radius:10px;
-      border:none;
-      background:var(--amber);
-      color:var(--navy);
-      font-weight:700;
-      cursor:pointer;
-    }
+    .manual-box{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);}
+    .manual-box.show{display:block;}
 
     /* Ticket / phiếu style */
     .ticket{
@@ -298,8 +281,9 @@
   <div class="eyebrow">KHO GCCK CX</div>
   <h1>Quản lý Vật tư Kho</h1>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('nhan')">📥 Nhận hàng</button>
-    <button class="tab-btn" onclick="switchTab('giao')">📤 Giao hàng</button>
+    <button class="tab-btn active" onclick="switchTab('nhan')">📥 Nhận</button>
+    <button class="tab-btn" onclick="switchTab('giao')">📤 Giao</button>
+    <button class="tab-btn" onclick="switchTab('tra')">🔍 Tra cứu</button>
   </div>
 </header>
 
@@ -317,10 +301,19 @@
         <div id="reader-nhan"></div>
         <button class="stop-btn" onclick="stopScan('nhan')">Dừng quét</button>
       </div>
-      <div class="manual-toggle" onclick="toggleManual('nhan')">hoặc nhập/dán mã thủ công</div>
+      <div class="manual-toggle" onclick="toggleManual('nhan')">hoặc nhập tay (không quét QR)</div>
       <div class="manual-box" id="manual-nhan">
-        <input type="text" id="manual-input-nhan" placeholder="LSX | STT | Mã CT | Tên CT | SL">
-        <button onclick="submitManual('nhan')">Dùng</button>
+        <div class="field-row">
+          <div class="field"><label>LSX *</label><input type="text" id="man-nhan-lsx"></div>
+          <div class="field"><label>STT *</label><input type="text" id="man-nhan-stt" inputmode="numeric"></div>
+        </div>
+        <div class="field"><label>Số ĐH</label><input type="text" id="man-nhan-sodh"></div>
+        <div class="field-row">
+          <div class="field"><label>Mã chi tiết</label><input type="text" id="man-nhan-mact"></div>
+          <div class="field"><label>Tên chi tiết</label><input type="text" id="man-nhan-ten"></div>
+        </div>
+        <div class="field"><label>Số lượng *</label><input type="text" id="man-nhan-sl" inputmode="numeric"></div>
+        <button class="primary-btn" onclick="submitManualNhan()">Dùng thông tin này</button>
       </div>
     </div>
 
@@ -339,14 +332,27 @@
         <div id="reader-giao"></div>
         <button class="stop-btn" onclick="stopScan('giao')">Dừng quét</button>
       </div>
-      <div class="manual-toggle" onclick="toggleManual('giao')">hoặc nhập/dán mã thủ công</div>
+      <div class="manual-toggle" onclick="toggleManual('giao')">hoặc nhập tay (không quét QR)</div>
       <div class="manual-box" id="manual-giao">
-        <input type="text" id="manual-input-giao" placeholder="LSX | STT | Mã CT | Tên CT | SL">
-        <button onclick="submitManual('giao')">Dùng</button>
+        <div class="field-row">
+          <div class="field"><label>LSX *</label><input type="text" id="man-giao-lsx"></div>
+          <div class="field"><label>STT *</label><input type="text" id="man-giao-stt" inputmode="numeric"></div>
+        </div>
+        <button class="primary-btn" onclick="submitManualGiao()">Tra cứu</button>
       </div>
     </div>
 
     <div id="result-giao"></div>
+  </div>
+
+  <!-- ================= TRA CỨU ================= -->
+  <div id="panel-tra" class="panel">
+    <div class="card">
+      <h2>Tra cứu theo Lệnh sản xuất (LSX)</h2>
+      <div class="field"><input type="text" id="tra-lsx" placeholder="Nhập LSX, ví dụ: KDN.19/07"></div>
+      <button class="primary-btn" onclick="submitTraCuu()">Tìm</button>
+    </div>
+    <div id="result-tra"></div>
   </div>
 
 </main>
@@ -390,10 +396,33 @@ function toggleManual(tab){
   document.getElementById('manual-'+tab).classList.toggle('show');
 }
 
-function submitManual(tab){
-  const val = document.getElementById('manual-input-'+tab).value.trim();
-  if(!val) return;
-  onScanSuccess(tab, val);
+function submitManualNhan(){
+  const lsx = document.getElementById('man-nhan-lsx').value.trim();
+  const stt = document.getElementById('man-nhan-stt').value.trim();
+  const sl  = document.getElementById('man-nhan-sl').value.trim();
+  if(!lsx || !stt || !sl){
+    showStatus('nhan', 'error', 'Vui lòng nhập đủ LSX, STT và Số lượng.');
+    return;
+  }
+  const data = {
+    lsx: lsx,
+    stt: stt,
+    soDh: document.getElementById('man-nhan-sodh').value.trim(),
+    mact: document.getElementById('man-nhan-mact').value.trim(),
+    ten: document.getElementById('man-nhan-ten').value.trim(),
+    sl: sl
+  };
+  renderReceiveForm(data);
+}
+
+function submitManualGiao(){
+  const lsx = document.getElementById('man-giao-lsx').value.trim();
+  const stt = document.getElementById('man-giao-stt').value.trim();
+  if(!lsx || !stt){
+    showStatus('giao', 'error', 'Vui lòng nhập đủ LSX và STT.');
+    return;
+  }
+  lookupForShip(lsx + '-' + stt, { lsx: lsx, stt: stt });
 }
 
 function startScan(tab){
@@ -427,27 +456,57 @@ function stopScan(tab){
   document.getElementById('btn-scan-'+tab).style.display = 'flex';
 }
 
+function normalizeLabel(s){
+  return s.replace(/đ/gi, 'd')
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase().trim();
+}
+
 function parseQr(text){
-  const parts = text.split('|').map(s=>s.trim());
-  return {
-    lsx: parts[0] || '',
-    stt: parts[1] || '',
-    mact: parts[2] || '',
-    ten: parts[3] || '',
-    sl: parts[4] || ''
-  };
+  const result = { lsx:'', soDh:'', stt:'', mact:'', ten:'', sl:'' };
+
+  if(text.indexOf(':') === -1 && text.indexOf('|') !== -1){
+    // Định dạng cũ: LSX | STT | Mã CT | Tên CT | SL
+    const parts = text.split('|').map(s=>s.trim());
+    result.lsx  = parts[0] || '';
+    result.stt  = parts[1] || '';
+    result.mact = parts[2] || '';
+    result.ten  = parts[3] || '';
+    result.sl   = parts[4] || '';
+    return result;
+  }
+
+  // Định dạng nhãn: mỗi dòng "Nhãn: giá trị" - trường nào trống thì bỏ qua
+  text.split(/\r?\n/).forEach(function(line){
+    const idx = line.indexOf(':');
+    if(idx === -1) return;
+    const label = normalizeLabel(line.slice(0, idx));
+    const value = line.slice(idx + 1).trim();
+    if(!value) return; // bỏ trống
+    if(label === 'lsx') result.lsx = value;
+    else if(label === 'so dh') result.soDh = value;
+    else if(label === 'stt') result.stt = value;
+    else if(label === 'ma ct' || label === 'ma chi tiet') result.mact = value;
+    else if(label === 'ten ct' || label === 'ten chi tiet') result.ten = value;
+    else if(label === 'sl' || label === 'so luong') result.sl = value;
+  });
+  return result;
 }
 
 function onScanSuccess(tab, text){
   stopScan(tab);
   const data = parseQr(text);
-  if(!data.lsx || !data.stt){
-    showStatus(tab, 'error', 'Không đọc được dữ liệu hợp lệ từ mã: "' + text + '"');
+  if(!data.lsx){
+    showStatus(tab, 'error', 'Không đọc được LSX từ mã QR này. Bạn có thể nhập tay ở bên dưới.');
     return;
   }
   if(tab === 'nhan'){
     renderReceiveForm(data);
   } else {
+    if(!data.stt){
+      showStatus(tab, 'error', 'Mã QR không có STT. Vui lòng dùng mục "nhập tay" bên dưới, nhập LSX và STT để tra cứu.');
+      return;
+    }
     const maId = data.lsx + '-' + data.stt;
     lookupForShip(maId, data);
   }
@@ -474,19 +533,22 @@ function escapeHtml(str){
 
 function renderReceiveForm(data, opts){
   opts = opts || {};
-  const maId = data.lsx + '-' + data.stt;
   const box = document.getElementById('result-nhan');
+  const sttRowHtml = data.stt
+    ? '<div class="ticket-row"><span class="label">STT</span><span class="value">'+escapeHtml(data.stt)+'</span></div>'
+    : '<div class="ticket-row"><span class="label">STT (nhập tay) *</span><span class="value"><input type="text" id="in-stt-manual" inputmode="numeric" style="width:90px;text-align:right;font-family:var(--mono);font-weight:600;border:1px solid var(--border);border-radius:6px;padding:4px 6px;"></span></div>';
+
   box.innerHTML = `
     <div class="card">
       <h2>2. Thông tin phiếu</h2>
       <div class="ticket">
         <span class="tag">PHIẾU</span>
         <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(data.lsx)}</span></div>
-        <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(data.stt)}</span></div>
-        <div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">${escapeHtml(data.mact)}</span></div>
-        <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(data.ten)}</span></div>
-        <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(data.sl)}</span></div>
-        <span class="maid-pill">${escapeHtml(maId)}</span>
+        ${sttRowHtml}
+        ${data.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(data.soDh)+'</span></div>' : ''}
+        ${data.mact ? '<div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">'+escapeHtml(data.mact)+'</span></div>' : ''}
+        ${data.ten ? '<div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">'+escapeHtml(data.ten)+'</span></div>' : ''}
+        ${data.sl ? '<div class="ticket-row"><span class="label">Số lượng</span><span class="value">'+escapeHtml(data.sl)+'</span></div>' : ''}
       </div>
     </div>
     <div class="card">
@@ -506,12 +568,21 @@ function renderReceiveForm(data, opts){
 
 function saveReceive(confirmDuplicate){
   const data = window.__currentReceiveData;
+  const sttManualEl = document.getElementById('in-stt-manual');
+  const stt = data.stt || (sttManualEl ? sttManualEl.value.trim() : '');
+
+  if(!stt){
+    document.getElementById('status-nhan').innerHTML = '<div class="status error">⛔ Vui lòng nhập STT trước khi lưu.</div>';
+    return;
+  }
+
   const payload = {
     lsx: data.lsx,
-    stt: data.stt,
-    mact: data.mact,
-    ten: data.ten,
-    sl: data.sl,
+    stt: stt,
+    soDh: data.soDh || '',
+    mact: data.mact || '',
+    ten: data.ten || '',
+    sl: data.sl || '',
     soKe: document.getElementById('in-soke').value,
     tang: document.getElementById('in-tang').value,
     ngayNhan: document.getElementById('in-ngaynhan').value,
@@ -583,6 +654,7 @@ function renderShipForm(maId, info){
         <span class="tag">TRONG KHO</span>
         <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(info.lsx)}</span></div>
         <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(info.stt)}</span></div>
+        ${info.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(info.soDh)+'</span></div>' : ''}
         <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(info.ten)}</span></div>
         <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(info.sl)}</span></div>
         <div class="ticket-row"><span class="label">Vị trí</span><span class="value">Kệ ${escapeHtml(info.soKe)} - Tầng ${escapeHtml(info.tang)}</span></div>
@@ -635,6 +707,55 @@ function saveShip(maId, confirmOverwrite){
       btn.innerHTML = 'Xác nhận giao';
       document.getElementById('status-giao').innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'. Kiểm tra lại SCRIPT_URL trong file.</div>';
     });
+}
+/* ---------------- TRA CỨU ---------------- */
+
+function submitTraCuu(){
+  const lsx = document.getElementById('tra-lsx').value.trim();
+  const box = document.getElementById('result-tra');
+  if(!lsx){
+    box.innerHTML = '<div class="status error">⛔ Vui lòng nhập LSX cần tra cứu.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="card"><div class="empty-hint"><span class="spinner"></span><br>Đang tìm kiếm...</div></div>';
+
+  callApi({ action: 'searchByLsx', lsx: lsx })
+    .then(function(res){
+      if(!res.success){
+        box.innerHTML = '<div class="status error">⛔ '+escapeHtml(res.message||'Có lỗi xảy ra')+'</div>';
+        return;
+      }
+      renderTraCuuResults(res.items);
+    })
+    .catch(function(err){
+      box.innerHTML = '<div class="status error">⛔ Lỗi kết nối: '+escapeHtml(err.message||err)+'</div>';
+    });
+}
+
+function renderTraCuuResults(items){
+  const box = document.getElementById('result-tra');
+  if(!items || items.length === 0){
+    box.innerHTML = '<div class="status error">⛔ Không tìm thấy chi tiết nào của LSX này.</div>';
+    return;
+  }
+  box.innerHTML = items.map(function(it){
+    return `
+      <div class="card">
+        <div class="ticket">
+          <span class="tag">${escapeHtml(it.maId||'')}</span>
+          <div class="ticket-row"><span class="label">LSX</span><span class="value">${escapeHtml(it.lsx)}</span></div>
+          <div class="ticket-row"><span class="label">STT</span><span class="value">${escapeHtml(it.stt)}</span></div>
+          ${it.soDh ? '<div class="ticket-row"><span class="label">Số ĐH</span><span class="value">'+escapeHtml(it.soDh)+'</span></div>' : ''}
+          ${it.mact ? '<div class="ticket-row"><span class="label">Mã chi tiết</span><span class="value">'+escapeHtml(it.mact)+'</span></div>' : ''}
+          <div class="ticket-row"><span class="label">Tên chi tiết</span><span class="value">${escapeHtml(it.ten||'')}</span></div>
+          <div class="ticket-row"><span class="label">Số lượng</span><span class="value">${escapeHtml(it.sl||'')}</span></div>
+          <div class="ticket-row"><span class="label">Số kệ</span><span class="value">${escapeHtml(it.soKe||'-')}</span></div>
+          <div class="ticket-row"><span class="label">Tầng</span><span class="value">${escapeHtml(it.tang||'-')}</span></div>
+          <div class="ticket-row"><span class="label">Ngày nhận</span><span class="value">${escapeHtml(it.ngayNhan||'-')}</span></div>
+          <div class="ticket-row"><span class="label">Ngày giao</span><span class="value">${escapeHtml(it.ngayGiao||'Chưa giao')}</span></div>
+        </div>
+      </div>`;
+  }).join('');
 }
 </script>
 </body>
