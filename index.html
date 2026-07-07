@@ -487,11 +487,6 @@
           <div class="field"><label>LSX *</label><input type="text" id="man-nhan-lsx"></div>
           <div class="field"><label>STT *</label><input type="text" id="man-nhan-stt" inputmode="numeric"></div>
         </div>
-        <div class="field"><label>Số ĐH</label><input type="text" id="man-nhan-sodh"></div>
-        <div class="field-row">
-          <div class="field"><label>Mã chi tiết</label><input type="text" id="man-nhan-mact"></div>
-          <div class="field"><label>Tên chi tiết</label><input type="text" id="man-nhan-ten"></div>
-        </div>
         <div class="field"><label>Số lượng *</label><input type="text" id="man-nhan-sl" inputmode="numeric"></div>
         <button class="primary-btn" onclick="submitManualNhan()">Dùng thông tin này</button>
       </div>
@@ -514,17 +509,12 @@
       </div>
       <div class="manual-toggle" onclick="toggleManual('giao')">hoặc nhập tay (không quét QR)</div>
       <div class="manual-box" id="manual-giao">
-  <div class="field-row">
-    <div class="field"><label>LSX *</label><input type="text" id="man-giao-lsx"></div>
-    <div class="field"><label>STT *</label><input type="text" id="man-giao-stt" inputmode="numeric"></div>
-  </div>
-  <div class="field"><label>Số ĐH</label><input type="text" id="man-giao-sodh"></div>
-  <div class="field-row">
-    <div class="field"><label>Mã chi tiết</label><input type="text" id="man-giao-mact"></div>
-    <div class="field"><label>Tên chi tiết</label><input type="text" id="man-giao-ten"></div>
-  </div>
-  <div class="field"><label>Số lượng *</label><input type="text" id="man-giao-sl" inputmode="numeric"></div>
-  <button class="primary-btn" onclick="submitManualGiao()">Dùng thông tin này</button>
+        <div class="field-row">
+          <div class="field"><label>LSX *</label><input type="text" id="man-giao-lsx"></div>
+          <div class="field"><label>STT *</label><input type="text" id="man-giao-stt" inputmode="numeric"></div>
+        </div>
+        <div class="field"><label>Số lượng *</label><input type="text" id="man-giao-sl" inputmode="numeric"></div>
+        <button class="primary-btn" onclick="submitManualGiao()">Dùng thông tin này</button>
       </div>
 
       <div id="result-giao"></div>
@@ -597,14 +587,7 @@ function submitManualNhan(){
     showStatus('nhan', 'error', 'Vui lòng nhập đủ LSX, STT và Số lượng.');
     return;
   }
-  const data = {
-    lsx: lsx,
-    stt: stt,
-    soDh: document.getElementById('man-nhan-sodh').value.trim(),
-    mact: document.getElementById('man-nhan-mact').value.trim(),
-    ten: document.getElementById('man-nhan-ten').value.trim(),
-    sl: sl
-  };
+  const data = { lsx: lsx, stt: stt, sl: sl };
   addToReceiveQueue(data);
 }
 
@@ -616,14 +599,7 @@ function submitManualGiao(){
     showStatus('giao', 'error', 'Vui lòng nhập đủ LSX, STT và Số lượng.');
     return;
   }
-  const data = {
-    lsx: lsx,
-    stt: stt,
-    soDh: document.getElementById('man-giao-sodh').value.trim(),
-    mact: document.getElementById('man-giao-mact').value.trim(),
-    ten: document.getElementById('man-giao-ten').value.trim(),
-    sl: sl
-  };
+  const data = { lsx: lsx, stt: stt, sl: sl };
   addToShipQueue(data);
 }
 
