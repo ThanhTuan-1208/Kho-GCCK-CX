@@ -296,7 +296,8 @@
       font-weight:600;
       padding:10px 12px;
       text-align:center;
-      z-index:1;
+      z-index:5;
+      box-shadow:0 2px 0 rgba(0,0,0,.15);
     }
     .tra-table tbody td{
       padding:8px 12px;
@@ -319,6 +320,84 @@
     .tra-table th:first-child,
     .tra-table td:first-child{
       border-left:none;
+    }
+
+    .summary-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .summary-card{
+      flex:1 1 120px;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px 16px;
+      text-align:center;
+    }
+    .summary-card .num{
+      font-family:var(--display);
+      font-size:24px;
+      font-weight:700;
+      color:var(--navy);
+    }
+    .summary-card .lbl{
+      font-size:12px;
+      color:var(--navy-soft);
+      margin-top:4px;
+      font-weight:600;
+    }
+    .summary-card.total .num{color:var(--navy);}
+    .summary-card.shipped .num{color:var(--green);}
+    .summary-card.unshipped .num{color:var(--amber-dark);}
+    .summary-card.percent .num{color:var(--navy);}
+    .summary-chart-card{
+      flex:0 0 auto;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+    }
+    .donut{
+      width:80px;
+      height:80px;
+      border-radius:50%;
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+    }
+    .donut::after{
+      content:'';
+      width:50px;
+      height:50px;
+      border-radius:50%;
+      background:var(--card);
+      position:absolute;
+    }
+    .donut-pct{
+      position:relative;
+      z-index:2;
+      font-family:var(--mono);
+      font-weight:700;
+      font-size:13px;
+      color:var(--navy);
+    }
+    .donut-legend{
+      font-size:12px;
+      line-height:1.7;
+    }
+    .donut-legend span{
+      display:inline-block;
+      width:9px;height:9px;
+      border-radius:2px;
+      margin-right:6px;
     }
 
     .tra-search-row{
@@ -820,12 +899,42 @@ function submitTraCuu(){
     });
 }
 
+function buildSummaryHtml(total, shippedCount, unshippedCount, percent){
+  const deg = percent * 3.6;
+  const gradient = 'conic-gradient(var(--green) 0deg ' + deg + 'deg, var(--amber-dark) ' + deg + 'deg 360deg)';
+  return `
+    <div class="summary-row">
+      <div class="summary-card total"><div class="num">${total}</div><div class="lbl">Tổng số món</div></div>
+      <div class="summary-card shipped"><div class="num">${shippedCount}</div><div class="lbl">Đã giao</div></div>
+      <div class="summary-card unshipped"><div class="num">${unshippedCount}</div><div class="lbl">Chưa giao</div></div>
+      <div class="summary-card percent"><div class="num">${percent}%</div><div class="lbl">Tỉ lệ đã giao</div></div>
+      <div class="summary-chart-card">
+        <div class="donut" style="background:${gradient};">
+          <span class="donut-pct">${percent}%</span>
+        </div>
+        <div class="donut-legend">
+          <div><span style="background:var(--green);"></span>Đã giao (${shippedCount})</div>
+          <div><span style="background:var(--amber-dark);"></span>Chưa giao (${unshippedCount})</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderTraCuuResults(items){
   const box = document.getElementById('result-tra');
   if(!items || items.length === 0){
     box.innerHTML = '<div class="status error">⛔ Không tìm thấy chi tiết nào của LSX này.</div>';
     return;
   }
+
+  const total = items.length;
+  const shippedCount = items.filter(function(it){
+    return Number(it.tongGiao||0) >= Number(it.sl||0) && Number(it.sl||0) > 0;
+  }).length;
+  const unshippedCount = total - shippedCount;
+  const percent = total ? Math.round((shippedCount/total)*100) : 0;
+  const summaryHtml = buildSummaryHtml(total, shippedCount, unshippedCount, percent);
+
   const rows = items.map(function(it, i){
     const giaoHtml = (it.tongGiao > 0)
       ? '<span class="shipped">'+escapeHtml(it.statusGiao||'')+'</span>'
@@ -849,7 +958,7 @@ function renderTraCuuResults(items){
       </tr>`;
   }).join('');
 
-  box.innerHTML = `
+  box.innerHTML = summaryHtml + `
     <div class="card">
       <div class="tra-table-wrap">
         <table class="tra-table">
